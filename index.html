@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Radar</title>
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <!-- Background glow elements for rich dark mode aesthetics -->
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+
+    <div class="app-container">
+        <!-- Sidebar / Navigation (Glassmorphic) -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#grad1)" />
+                        <path d="M2 17L12 22L22 17" stroke="url(#grad2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M2 12L12 17L22 12" stroke="url(#grad2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <defs>
+                            <linearGradient id="grad1" x1="2" y1="2" x2="22" y2="12" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#38bdf8" />
+                                <stop offset="100%" stop-color="#818cf8" />
+                            </linearGradient>
+                            <linearGradient id="grad2" x1="2" y1="12" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#38bdf8" />
+                                <stop offset="100%" stop-color="#c084fc" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>BQ Release Radar</h1>
+                    <p>Track BigQuery updates in real-time</p>
+                </div>
+            </div>
+
+            <!-- Global Actions -->
+            <div class="header-actions">
+                <div class="sync-status" id="syncStatus">
+                    <span class="status-indicator-dot online"></span>
+                    <span class="status-text">Connected</span>
+                </div>
+                <button class="btn btn-primary" id="refreshBtn" title="Sync latest release notes">
+                    <svg class="icon icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                    </svg>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Layout Grid -->
+        <main class="app-main">
+            <!-- Feed Control Bar -->
+            <section class="feed-controls">
+                <div class="search-wrapper">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search updates (e.g. ML, vector, reservations)..." autocomplete="off">
+                    <button class="clear-search-btn" id="clearSearchBtn" style="display: none;">&times;</button>
+                </div>
+                <div class="filter-group">
+                    <button class="filter-chip active" data-type="all">All Updates</button>
+                    <button class="filter-chip" data-type="feature">Features</button>
+                    <button class="filter-chip" data-type="change">Changes</button>
+                    <button class="filter-chip" data-type="deprecation">Deprecations</button>
+                    <button class="filter-chip" data-type="other">Other</button>
+                </div>
+            </section>
+
+            <!-- Loading State -->
+            <div class="loading-state" id="loadingState">
+                <div class="spinner"></div>
+                <p>Retrieving release notes from Google Cloud...</p>
+            </div>
+
+            <!-- Error State -->
+            <div class="error-state" id="errorState" style="display: none;">
+                <div class="error-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <h3>Failed to load release notes</h3>
+                <p id="errorMessage">Unable to fetch feed data. Please check your internet connection and try again.</p>
+                <button class="btn btn-secondary" id="retryBtn">Retry Connection</button>
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <h3>No updates match your filters</h3>
+                <p>Try adjusting your search terms or selecting a different filter chip.</p>
+            </div>
+
+            <!-- Content Area: Feed and Tweet Composer -->
+            <div class="content-split-layout">
+                <!-- Release Notes Grid -->
+                <div class="feed-grid" id="feedGrid">
+                    <!-- Cards will be dynamically injected here -->
+                </div>
+
+                <!-- Tweet Composer Panel (Sliding Drawer / Floating Widget) -->
+                <aside class="tweet-panel" id="tweetPanel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <svg class="panel-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                            <h3>Tweet Composer</h3>
+                        </div>
+                        <button class="btn-close-panel" id="closePanelBtn" title="Dismiss panel">&times;</button>
+                    </div>
+
+                    <div class="panel-body">
+                        <div class="instruction-box">
+                            <p>Customize your tweet text below. We've auto-generated a concise summary of the selected release note.</p>
+                        </div>
+
+                        <!-- Tweet Preview Box -->
+                        <div class="tweet-editor-container">
+                            <textarea id="tweetTextarea" rows="6" maxlength="280" placeholder="What's happening?"></textarea>
+                            
+                            <!-- Character Counter and Action Bar -->
+                            <div class="tweet-editor-footer">
+                                <div class="char-count-wrapper">
+                                    <svg class="char-count-ring" width="28" height="28">
+                                        <circle class="ring-bg" cx="14" cy="14" r="10"></circle>
+                                        <circle class="ring-progress" id="charRing" cx="14" cy="14" r="10"></circle>
+                                    </svg>
+                                    <span id="charCountLabel">280</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Update Link Preview Card -->
+                        <div class="link-preview-card">
+                            <span class="preview-tag" id="previewTag">Feature</span>
+                            <h4 id="previewDate">July 01, 2026</h4>
+                            <p class="preview-text-snippet" id="previewTextSnippet">You can now use pre-trained TimesFM models in BigQuery ML...</p>
+                            <span class="preview-url" id="previewUrl">docs.cloud.google.com/bigquery/...</span>
+                        </div>
+
+                        <!-- Share Button -->
+                        <button class="btn btn-twitter btn-block" id="publishTweetBtn">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                            <span>Share on X / Twitter</span>
+                        </button>
+                    </div>
+                </aside>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>BigQuery Release Radar &copy; 2026. Data fetched directly from Google Cloud Platform Release Feeds.</p>
+        </footer>
+    </div>
+
+    <!-- Main JavaScript File -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
